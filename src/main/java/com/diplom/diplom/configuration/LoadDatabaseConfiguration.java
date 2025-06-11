@@ -13,6 +13,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.diplom.diplom.features.application.model.Application;
+import com.diplom.diplom.features.application.model.ApplicationStatus;
+import com.diplom.diplom.features.application.repository.ApplicationRepository;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +35,8 @@ public class LoadDatabaseConfiguration {
     @Bean
     public CommandLineRunner initDatabase(AuthenticationUserRepository authenticationUserRepository,
                                           PostRepository postRepository,
-                                          OpportunityRepository opportunityRepository) {
+                                          OpportunityRepository opportunityRepository,
+                                          ApplicationRepository applicationRepository) {
         return args -> {
             // Админ
             AuthenticationUser admin = new AuthenticationUser("dias@example.com", encoder.encode("dias"));
@@ -51,6 +56,8 @@ public class LoadDatabaseConfiguration {
 
             createPosts(postRepository, users);
             createOpportunities(opportunityRepository);
+
+            createApplications(applicationRepository, users, opportunityRepository);
         };
     }
 
@@ -438,5 +445,46 @@ public class LoadDatabaseConfiguration {
         // Note: email and phone fields are not in the Opportunity entity you provided
         // You may need to add these fields to the entity if needed
         return opportunity;
+    }
+
+    private void createApplications(ApplicationRepository applicationRepository,
+                                    List<AuthenticationUser> users,
+                                    OpportunityRepository opportunityRepository) {
+        List<Opportunity> opportunities = opportunityRepository.findAll();
+
+        if (opportunities.isEmpty() || users.isEmpty()) {
+            return;
+        }
+
+        Random random = new Random();
+
+        // Создать 3 тестовых заявки
+        // 1. PENDING заявка
+        Application pendingApp = new Application(
+                users.get(random.nextInt(users.size())),
+                opportunities.get(0),
+                "I am very interested in this internship opportunity. I have been studying software development for 2 years and believe this position would be perfect for gaining practical experience."
+        );
+        pendingApp.setStatus(ApplicationStatus.PENDING);
+
+        // 2. ACCEPTED заявка
+        Application acceptedApp = new Application(
+                users.get(random.nextInt(users.size())),
+                opportunities.get(1),
+                "I am excited to apply for this data science internship. My background in statistics and Python programming makes me a strong candidate for this role."
+        );
+        acceptedApp.setStatus(ApplicationStatus.ACCEPTED);
+        acceptedApp.setAdminNotes("Great candidate with strong technical skills. Approved for interview.");
+
+        // 3. REJECTED заявка
+        Application rejectedApp = new Application(
+                users.get(random.nextInt(users.size())),
+                opportunities.get(2),
+                "I would like to apply for this mobile development position. I am eager to learn and contribute to your team."
+        );
+        rejectedApp.setStatus(ApplicationStatus.REJECTED);
+        rejectedApp.setAdminNotes("Unfortunately, the candidate doesn't meet the minimum requirements for this position.");
+
+        applicationRepository.saveAll(Arrays.asList(pendingApp, acceptedApp, rejectedApp));
     }
 }
